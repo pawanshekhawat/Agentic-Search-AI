@@ -10,8 +10,10 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.71",
     "@tavily/core": "^0.7.3",
     "@types/express": "^5.0.6",
+    "ai": "^6.0.176",
     "express": "^5.2.1"
   }
 }
