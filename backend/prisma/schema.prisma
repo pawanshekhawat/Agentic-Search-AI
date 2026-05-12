@@ -12,11 +12,14 @@ datasource db {
 // defining the schema
 
 model User {
-  id           String          @id          @default(uuid())
-  name         String
-  email        String
-  provider     AuthProvider
-  conversations Conversation[]
+  id                    String          @id          @default(uuid())
+  name                  String
+  email                 String          @unique
+  provider              AuthProvider
+  dailyRequestLimit     Int             @default(10)
+  dailyRequestsUsed     Int             @default(0)
+  dailyRequestsUsedDate String?
+  conversations         Conversation[]
 }
 
 model Conversation {

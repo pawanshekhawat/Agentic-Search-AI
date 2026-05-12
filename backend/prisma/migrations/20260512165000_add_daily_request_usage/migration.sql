@@ -1,0 +1,4 @@
+ALTER TABLE "User"
+ADD COLUMN "dailyRequestLimit" INTEGER NOT NULL DEFAULT 10,
+ADD COLUMN "dailyRequestsUsed" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN "dailyRequestsUsedDate" TEXT;
