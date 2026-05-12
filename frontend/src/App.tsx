@@ -5,6 +5,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={<Chat/>}/>
+      <Route path="/c/:conversationId" element={<Chat/>}/>
       <Route path="/auth" element={<Auth/>}/>
     </Routes>
   );
