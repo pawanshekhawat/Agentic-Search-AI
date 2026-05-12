@@ -5,18 +5,16 @@
  * It is included in `src/index.html`.
  */
 
-import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { BrowserRouter } from "react-router";
+import "./index.css";
 
 const elem = document.getElementById("root")!;
 const app = (
-  <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </StrictMode>
+  <BrowserRouter>
+    <App />
+  </BrowserRouter>
 );
 
 if (import.meta.hot) {
