@@ -5,7 +5,7 @@ import { google } from '@ai-sdk/google';
 import { SYSTEM_PROMPT, PROMPT_TEMPLATE } from "./promt";
 import z from "zod";
 import { prisma } from "./db";
-import { middleware } from "./middleware";
+import { middleware } from "./auth-middleware";
 import cors from "cors";
 import { createSupabaseClient } from "./client";
 
