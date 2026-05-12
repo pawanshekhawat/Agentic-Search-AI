@@ -33,11 +33,11 @@ const renameConversationBodySchema = z.object({
 
 const followupBodySchema = z.object({
   conversationId: z.string().min(1),
-  query: z.string().min(1),
+  query: z.string().trim().min(1).max(1200),
 });
 
 const askBodySchema = z.object({
-  query: z.string().min(1),
+  query: z.string().trim().min(1).max(1200),
 });
 
 type UserDailyUsage = {
@@ -56,6 +56,8 @@ type DailyUsageStatus = {
 };
 
 const RATE_LIMIT_MAX_REQUESTS_PER_DAY = Number(process.env.RATE_LIMIT_MAX_REQUESTS_PER_DAY ?? 10);
+const MAX_HISTORY_MESSAGES_FOR_FOLLOWUP = 20;
+const MAX_HISTORY_CHARS_FOR_FOLLOWUP = 12000;
 
 function getUtcDayKey() {
   return new Date().toISOString().slice(0, 10); // YYYY-MM-DD in UTC
@@ -122,20 +124,41 @@ async function consumeDailyRequest(userId: string) {
       throw new Error("User not found");
     }
 
-    const normalized = normalizeDailyUsage(user);
-    if (normalized.limited) {
-      return normalized;
-    }
+    const limit = user.dailyRequestLimit || RATE_LIMIT_MAX_REQUESTS_PER_DAY;
 
-    const nextUsed = normalized.used + 1;
-
-    const updated = await tx.user.update({
-      where: { id: userId },
-      data: {
-        dailyRequestLimit: user.dailyRequestLimit || RATE_LIMIT_MAX_REQUESTS_PER_DAY,
-        dailyRequestsUsed: nextUsed,
-        dailyRequestsUsedDate: dayKey,
+    await tx.user.updateMany({
+      where: {
+        id: userId,
+        OR: [
+          { dailyRequestsUsedDate: null },
+          { dailyRequestsUsedDate: { not: dayKey } },
+        ],
       },
+        data: {
+          dailyRequestLimit: limit,
+          dailyRequestsUsed: 0,
+          dailyRequestsUsedDate: dayKey,
+        },
+    });
+
+    const consume = await tx.user.updateMany({
+      where: {
+        id: userId,
+        dailyRequestsUsedDate: dayKey,
+        dailyRequestsUsed: {
+          lt: limit,
+        },
+      },
+      data: {
+        dailyRequestLimit: limit,
+        dailyRequestsUsed: {
+          increment: 1,
+        },
+      },
+    });
+
+    const updated = await tx.user.findUnique({
+      where: { id: userId },
       select: {
         dailyRequestLimit: true,
         dailyRequestsUsed: true,
@@ -143,7 +166,21 @@ async function consumeDailyRequest(userId: string) {
       },
     });
 
-    return normalizeDailyUsage(updated);
+    if (!updated) {
+      throw new Error("User not found");
+    }
+
+    const normalized = normalizeDailyUsage(updated);
+    if (consume.count === 0) {
+      return {
+        ...normalized,
+        limited: true,
+        remaining: 0,
+        retryAfterSeconds: getRetryAfterSeconds(),
+      };
+    }
+
+    return normalized;
   });
 }
 
@@ -173,6 +210,20 @@ function makeConversationSlug(query: string) {
 function safeErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message;
   return "Unknown error";
+}
+
+function trimConversationHistory(messages: Array<{ role: string; content: string }>) {
+  let remainingChars = MAX_HISTORY_CHARS_FOR_FOLLOWUP;
+  const selected: Array<{ role: string; content: string }> = [];
+
+  for (const message of messages.slice(-MAX_HISTORY_MESSAGES_FOR_FOLLOWUP).reverse()) {
+    if (remainingChars <= 0) break;
+    const content = message.content.slice(0, remainingChars);
+    selected.unshift({ role: message.role, content });
+    remainingChars -= content.length;
+  }
+
+  return selected;
 }
 
 function isSimpleGreetingQuery(query: string) {
@@ -675,6 +726,13 @@ app.post("/atreus_ask", middleware, async (req, res) => {
         error: "Unauthorized",
       });
     }
+    const parsedBody = askBodySchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      return res.status(400).json({
+        error: "Invalid request body",
+      });
+    }
+
     const rateLimitResult = await consumeDailyRequest(req.userId);
     if (rateLimitResult.limited) {
       res.setHeader("Retry-After", rateLimitResult.retryAfterSeconds.toString());
@@ -690,13 +748,6 @@ app.post("/atreus_ask", middleware, async (req, res) => {
     res.setHeader("X-RateLimit-Limit", rateLimitResult.limit.toString());
     res.setHeader("X-RateLimit-Remaining", rateLimitResult.remaining.toString());
     res.setHeader("X-RateLimit-Used", rateLimitResult.used.toString());
-
-    const parsedBody = askBodySchema.safeParse(req.body);
-    if (!parsedBody.success) {
-      return res.status(400).json({
-        error: "Invalid request body",
-      });
-    }
 
     const query = parsedBody.data.query;
     const slug = makeConversationSlug(query);
@@ -796,6 +847,13 @@ app.post("/atreus_ask/followups", middleware, async (req, res) => {
         error: "Unauthorized",
       });
     }
+    const parsedBody = followupBodySchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      return res.status(400).json({
+        error: "Invalid request body",
+      });
+    }
+
     const rateLimitResult = await consumeDailyRequest(req.userId);
     if (rateLimitResult.limited) {
       res.setHeader("Retry-After", rateLimitResult.retryAfterSeconds.toString());
@@ -811,13 +869,6 @@ app.post("/atreus_ask/followups", middleware, async (req, res) => {
     res.setHeader("X-RateLimit-Limit", rateLimitResult.limit.toString());
     res.setHeader("X-RateLimit-Remaining", rateLimitResult.remaining.toString());
     res.setHeader("X-RateLimit-Used", rateLimitResult.used.toString());
-
-    const parsedBody = followupBodySchema.safeParse(req.body);
-    if (!parsedBody.success) {
-      return res.status(400).json({
-        error: "Invalid request body",
-      });
-    }
 
     const { conversationId, query } = parsedBody.data;
 
@@ -846,7 +897,7 @@ app.post("/atreus_ask/followups", middleware, async (req, res) => {
       });
     }
 
-    const conversationHistory = conversation.messages
+    const conversationHistory = trimConversationHistory(conversation.messages)
       .map((message) => `${message.role}: ${message.content}`)
       .join("\n");
 
