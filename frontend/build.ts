@@ -116,12 +116,22 @@ if (existsSync(outdir)) {
 }
 
 const start = performance.now();
+const supabasePublishableKey =
+  process.env.BUN_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.BUN_PUBLIC_SUPABASE_PUBLISAHABLE_KEY ||
+  "";
+
 const publicEnvDefines = {
   "process.env.BUN_PUBLIC_SUPABASE_URL": JSON.stringify(process.env.BUN_PUBLIC_SUPABASE_URL || ""),
-  "process.env.BUN_PUBLIC_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(process.env.BUN_PUBLIC_SUPABASE_PUBLISHABLE_KEY || ""),
+  "process.env.BUN_PUBLIC_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(supabasePublishableKey),
+  "process.env.BUN_PUBLIC_SUPABASE_PUBLISAHABLE_KEY": JSON.stringify(supabasePublishableKey),
   "process.env.VITE_BACKEND_URL": JSON.stringify(process.env.VITE_BACKEND_URL || ""),
   "process.env.BUN_PUBLIC_BACKEND_URL": JSON.stringify(process.env.BUN_PUBLIC_BACKEND_URL || ""),
   "process.env.VITE_BUILDER_LINKEDIN_URL": JSON.stringify(process.env.VITE_BUILDER_LINKEDIN_URL || ""),
+  __SUPABASE_URL__: JSON.stringify(process.env.BUN_PUBLIC_SUPABASE_URL || ""),
+  __SUPABASE_PUBLISHABLE_KEY__: JSON.stringify(supabasePublishableKey),
+  __BACKEND_URL__: JSON.stringify(process.env.VITE_BACKEND_URL || process.env.BUN_PUBLIC_BACKEND_URL || ""),
+  __BUILDER_LINKEDIN_URL__: JSON.stringify(process.env.VITE_BUILDER_LINKEDIN_URL || ""),
 };
 
 const entrypoints = [...new Bun.Glob("**.html").scanSync("src")]

@@ -1,3 +1,9 @@
+declare const __BACKEND_URL__: string | undefined;
+declare const __BUILDER_LINKEDIN_URL__: string | undefined;
+
+const buildBackendUrl = typeof __BACKEND_URL__ === "string" ? __BACKEND_URL__ : "";
+const buildBuilderLinkedinUrl =
+  typeof __BUILDER_LINKEDIN_URL__ === "string" ? __BUILDER_LINKEDIN_URL__ : "";
 const frontendEnv =
   typeof process !== "undefined" && process.env
     ? (process.env as Record<string, string | undefined>)
@@ -10,6 +16,9 @@ const isLocalBrowser =
 export const BACKEND_URL =
   frontendEnv.VITE_BACKEND_URL ||
   frontendEnv.BUN_PUBLIC_BACKEND_URL ||
+  buildBackendUrl ||
   (isLocalBrowser ? "http://localhost:4000" : "https://atreus-production.up.railway.app");
 export const BUILDER_LINKEDIN_URL =
-  frontendEnv.VITE_BUILDER_LINKEDIN_URL || "https://www.linkedin.com/in/pawan2402/";
+  frontendEnv.VITE_BUILDER_LINKEDIN_URL ||
+  buildBuilderLinkedinUrl ||
+  "https://www.linkedin.com/in/pawan2402/";
