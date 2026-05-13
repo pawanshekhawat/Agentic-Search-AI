@@ -116,6 +116,13 @@ if (existsSync(outdir)) {
 }
 
 const start = performance.now();
+const publicEnvDefines = {
+  "process.env.BUN_PUBLIC_SUPABASE_URL": JSON.stringify(process.env.BUN_PUBLIC_SUPABASE_URL || ""),
+  "process.env.BUN_PUBLIC_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(process.env.BUN_PUBLIC_SUPABASE_PUBLISHABLE_KEY || ""),
+  "process.env.VITE_BACKEND_URL": JSON.stringify(process.env.VITE_BACKEND_URL || ""),
+  "process.env.BUN_PUBLIC_BACKEND_URL": JSON.stringify(process.env.BUN_PUBLIC_BACKEND_URL || ""),
+  "process.env.VITE_BUILDER_LINKEDIN_URL": JSON.stringify(process.env.VITE_BUILDER_LINKEDIN_URL || ""),
+};
 
 const entrypoints = [...new Bun.Glob("**.html").scanSync("src")]
   .map(a => path.resolve("src", a))
@@ -131,6 +138,7 @@ const result = await Bun.build({
   sourcemap: "linked",
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
+    ...publicEnvDefines,
   },
   ...cliConfig,
 });
