@@ -15,15 +15,19 @@ export async function middleware(req: Request, res: Response, next: NextFunction
     const authHeader = req.headers.authorization;
 
 
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return res.status(401).json({
-            error: "No token"
+            error: "Missing or invalid Authorization header"
         });
     }
-    const token = authHeader.replace("Bearer ", "");
+    const token = authHeader.slice("Bearer ".length).trim();
+    if (!token) {
+        return res.status(401).json({
+            error: "Missing bearer token"
+        });
+    }
 
     const data = await client.auth.getUser(token)
-    const userId = data.data.user?.id
     const user = data.data.user
     if (user) {
         try {
@@ -49,8 +53,8 @@ export async function middleware(req: Request, res: Response, next: NextFunction
         req.userId = user.id
         next()
     } else {
-        res.status(403).json({
-            error: "Incorrect Inputs"
+        res.status(401).json({
+            error: data.error?.message || "Invalid or expired token"
         })
     }
 }
