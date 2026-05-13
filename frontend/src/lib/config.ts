@@ -15,9 +15,10 @@ const isLocalBrowser =
 
 export const BACKEND_URL =
   frontendEnv.VITE_BACKEND_URL ||
-  frontendEnv.BUN_PUBLIC_BACKEND_URL ||
+  "https://backend-7y28.onrender.com" ||
   buildBackendUrl ||
-  (isLocalBrowser ? "http://localhost:4000" : "https://atreus-production.up.railway.app");
+  (isLocalBrowser ? "http://localhost:4000" : "https://backend-7y28.onrender.com");
+
 export const BUILDER_LINKEDIN_URL =
   frontendEnv.VITE_BUILDER_LINKEDIN_URL ||
   buildBuilderLinkedinUrl ||

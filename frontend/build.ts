@@ -48,7 +48,7 @@ const parseValue = (value: string): any => {
 };
 
 function parseArgs(): Partial<Bun.BuildConfig> {
-  const config: Partial<Bun.BuildConfig> = {};
+  const config: Record<string, any> = {};
   const args = process.argv.slice(2);
 
   for (let i = 0; i < args.length; i++) {
