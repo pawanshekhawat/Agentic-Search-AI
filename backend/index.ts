@@ -14,6 +14,10 @@ const supabase = createSupabaseClient();
 const app = express();
 const PORT = Number(process.env.PORT || 4000);
 
+function normalizeOrigin(value: string) {
+  return value.trim().replace(/\/+$/, "");
+}
+
 const defaultAllowedOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
@@ -21,16 +25,16 @@ const defaultAllowedOrigins = [
 
 const envAllowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || "")
   .split(",")
-  .map((origin) => origin.trim())
+  .map((origin) => normalizeOrigin(origin))
   .filter(Boolean);
 
-const allowedOrigins = new Set([...defaultAllowedOrigins, ...envAllowedOrigins]);
+const allowedOrigins = new Set([...defaultAllowedOrigins.map(normalizeOrigin), ...envAllowedOrigins]);
 
 app.use(express.json());
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.has(origin)) return callback(null, true);
+    if (allowedOrigins.has(normalizeOrigin(origin))) return callback(null, true);
     return callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
