@@ -19,12 +19,13 @@ function normalizeOrigin(value: string) {
 }
 
 const defaultAllowedOrigins = [
+  "https://atreus-chat.vercel.app",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
 ];
 
 const envAllowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || "")
-  .split(",")
+  .split(/[\s,|]+/)
   .map((origin) => normalizeOrigin(origin))
   .filter(Boolean);
 
