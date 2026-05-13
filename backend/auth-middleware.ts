@@ -12,6 +12,10 @@ declare global {
 
 const client = createSupabaseClient()
 export async function middleware(req: Request, res: Response, next: NextFunction) {
+    if (req.method === "OPTIONS") {
+        return next();
+    }
+
     const authHeader = req.headers.authorization;
 
 

@@ -6,7 +6,7 @@ import { SYSTEM_PROMPT, PROMPT_TEMPLATE } from "./promt";
 import z from "zod";
 import { prisma } from "./db";
 import { middleware } from "./auth-middleware";
-import cors from "cors";
+import cors, { type CorsOptions } from "cors";
 import { createSupabaseClient } from "./client";
 
 const client = tavily({ apiKey: process.env.TAVILY_API_KEY });
@@ -31,15 +31,25 @@ const envAllowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || "")
 
 const allowedOrigins = new Set([...defaultAllowedOrigins.map(normalizeOrigin), ...envAllowedOrigins]);
 
-app.use(express.json());
-app.use(cors({
+const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
     if (allowedOrigins.has(normalizeOrigin(origin))) return callback(null, true);
     return callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
-}));
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
+app.use(express.json());
+
+app.get("/", (_req, res) => {
+  return res.status(200).json({ status: "ok" });
+});
 
 const authHeaderSchema = z.object({
   authorization: z.string().startsWith("Bearer "),
