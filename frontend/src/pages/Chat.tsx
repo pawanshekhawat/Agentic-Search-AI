@@ -360,6 +360,13 @@ export const Chat = () => {
     }
 
     async function loadConversationById(id: string, options?: { syncUrl?: boolean; optimistic?: boolean }) {
+        if (id === selectedConversationId && !options?.optimistic) {
+            return;
+        }
+        if (id === loadingConversationId) {
+            return;
+        }
+
         const requestId = ++conversationLoadSeq.current;
         setErrorMessage(null);
         setLoadingConversationId(id);
@@ -449,7 +456,7 @@ export const Chat = () => {
         ) {
             loadConversationById(initialConversationIdFromUrl, { syncUrl: false });
         }
-    }, [user?.id, initialConversationIdFromUrl, selectedConversationId, loadingConversationId]);
+    }, [user?.id, initialConversationIdFromUrl]);
 
     useEffect(() => {
         if (!userScopedHiddenKey) return;
@@ -645,13 +652,18 @@ export const Chat = () => {
             if (streamError) {
                 setErrorMessage(streamError);
             }
+            const sources = extractSourceUrls(fullText);
+            setLatestSources(sources);
+            if (sources.length > 0) {
+                setConversationMessageSources((prev) => ({ ...prev, [assistantMessageId]: sources }));
+            }
             setIsSourcesPanelOpen(false);
             setChatMessages((prev) =>
                 prev.map((message) =>
                     message.id === assistantMessageId ? { ...message, isStreaming: false } : message
                 )
             );
-            await loadConversationById(selectedConversationId);
+            await loadConversations();
         } catch (error) {
             setErrorMessage(error instanceof Error ? error.message : "Failed to fetch follow-up");
         } finally {
@@ -734,6 +746,9 @@ export const Chat = () => {
     }
 
     function handleNewChat() {
+        // Cancel any in-flight conversation load so it cannot overwrite new chat state.
+        conversationLoadSeq.current += 1;
+        setLoadingConversationId(null);
         setSelectedConversation(null);
         setSelectedConversationId(null);
         setChatMessages([]);
@@ -1235,9 +1250,6 @@ export const Chat = () => {
                                                         </div>
                                                     </div>
                                                 ))}
-                                                {isStreamingAsk && (
-                                                    <div className="max-w-[60%] animate-pulse rounded-2xl border border-white/10 bg-black/20 p-4" />
-                                                )}
                                             </div>
                                         </section>
 

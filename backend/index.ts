@@ -12,11 +12,28 @@ import { createSupabaseClient } from "./client";
 const client = tavily({ apiKey: process.env.TAVILY_API_KEY });
 const supabase = createSupabaseClient();
 const app = express();
+const PORT = Number(process.env.PORT || 4000);
+
+const defaultAllowedOrigins = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+];
+
+const envAllowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const allowedOrigins = new Set([...defaultAllowedOrigins, ...envAllowedOrigins]);
 
 app.use(express.json());
 app.use(cors({
-  origin: "http://localhost:3000",
-  credentials: true
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.has(origin)) return callback(null, true);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
 }));
 
 const authHeaderSchema = z.object({
@@ -901,12 +918,21 @@ app.post("/atreus_ask/followups", middleware, async (req, res) => {
       .map((message) => `${message.role}: ${message.content}`)
       .join("\n");
 
+    const shouldUseWebSearch = shouldUseTavilySearch(query);
+    const webSearchResponse = shouldUseWebSearch
+      ? await client.search(query, { searchDepth: "advanced" })
+      : null;
+    const webSearchResults = webSearchResponse?.results ?? [];
+
     const followupPrompt = [
       "You are continuing an existing conversation.",
       "Use the chat history below and answer the latest user follow-up query.",
       "",
       "## Chat History",
       conversationHistory || "No prior messages.",
+      "",
+      "## Web Search Results",
+      shouldUseWebSearch ? JSON.stringify(webSearchResponse) : "No web search used for this query.",
       "",
       "## Latest User Follow-up Query",
       query,
@@ -936,12 +962,21 @@ app.post("/atreus_ask/followups", middleware, async (req, res) => {
       res.write(textPart);
     }
 
+    if (webSearchResults.length > 0) {
+      res.write("\n<SOURCES>\n");
+      res.write(JSON.stringify(webSearchResults.map((result) => ({ url: result.url }))));
+      res.write("\n</SOURCES>\n");
+    }
+
     res.end();
 
     if (assistantResponse.trim()) {
       await prisma.message.create({
         data: {
-          content: assistantResponse.trim(),
+          content:
+            webSearchResults.length > 0
+              ? `${assistantResponse.trim()}\n<SOURCES>\n${JSON.stringify(webSearchResults.map((result) => ({ url: result.url })))}\n</SOURCES>`
+              : assistantResponse.trim(),
           role: "Assistant",
           conversationId,
         },
@@ -960,6 +995,6 @@ app.post("/atreus_ask/followups", middleware, async (req, res) => {
   }
 })
 
-app.listen(4000, () => {
-    console.log("Server is running on port 4000");
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });

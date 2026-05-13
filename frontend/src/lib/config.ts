@@ -1,3 +1,6 @@
-export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
+const env = (import.meta as { env?: Record<string, string | undefined> }).env;
+
+export const BACKEND_URL =
+  env?.VITE_BACKEND_URL || "https://atreus-production.up.railway.app";
 export const BUILDER_LINKEDIN_URL =
-  import.meta.env.VITE_BUILDER_LINKEDIN_URL || "https://www.linkedin.com/in/pawan2402/";
+  env?.VITE_BUILDER_LINKEDIN_URL || "https://www.linkedin.com/in/pawan2402/";
