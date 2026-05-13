@@ -13,6 +13,15 @@ const client = tavily({ apiKey: process.env.TAVILY_API_KEY });
 const supabase = createSupabaseClient();
 const app = express();
 const PORT = Number(process.env.PORT || 4000);
+const HOST = "0.0.0.0";
+
+process.on("unhandledRejection", (error) => {
+  console.error("Unhandled promise rejection:", error);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught exception:", error);
+});
 
 function normalizeOrigin(value: string) {
   return value.trim().replace(/\/+$/, "");
@@ -1010,6 +1019,6 @@ app.post("/atreus_ask/followups", middleware, async (req, res) => {
   }
 })
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+    console.log(`Server is running on ${HOST}:${PORT}`);
 });
