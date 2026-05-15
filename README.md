@@ -63,6 +63,8 @@ Live URL : [Atreus](https://atreus-chat.vercel.app/)
 6. Frontend renders streamed content, markdown, and sources.
 7. Usage counters and remaining requests are shown in UI.
 
+![Workflow Image](https://res.cloudinary.com/dmqwd5jcq/image/upload/v1778867162/NotebookLM_InfoGraphic_e8gufr.png)
+
 ## Prompt Configuration
 
 System prompt is configurable using environment variables:
